@@ -1,0 +1,121 @@
+{
+  "hasLabel": false,
+  "fileName": "C:\\Users\\nguyenngochai\\Self_study\\EXPO_OCR_AI_MOBILE\\ocr-ai-mobile\\api\\applications\\test_helpers\\images_test\\08IE1N.jpg",
+  "predict": {
+    "title": "領収書",
+    "corporate_id": "3160001008726",
+    "company": [
+      "NOT_FOUND_COMPANY"
+    ],
+    "total": "1314",
+    "subtotal": "1217",
+    "deposit": "NOT_FOUND",
+    "eight_pct_tax": "1314",
+    "ten_pct_tax": "NOT_FOUND",
+    "change_amnt": "NOT_FOUND",
+    "date": "2024年02月26日",
+    "time": "12:38",
+    "zip": [
+      "NOT_FOUND_ZIP"
+    ],
+    "tel": "077-561-6200",
+    "average_conf": 95.54,
+    "corporate_id_valid": true
+  },
+  "all_texts": "ALPLAZA アル・プラザ\n草津\nTEL077-561-6200\n登録番号 T3160001008726\n領収証\nお買い上げありがとうございました\n2024年02月26日(月)12:38 45 レジ0045\n責N0 45セルフレジ\n#味わう肉厚焼売 ¥398\n値引 10% -40\n#鶏もも唐揚げ ¥461\n値引 10% -47\n#10品目具材の春巻 ¥208\n値引 10% -21\n♯ダノンプチダノンみか ¥258\n小計 ¥1,217\n軽減8%対象額 ¥1,314\n(内消費税等) ¥97\n合計 ¥1,314\nH0Pマネー ¥1,314\nお買上点数 4点\nH0Pマネー情報\nカードN0. *********8704\nセンター取引番号 8026659429\n伝票番号 00734\nバリューカード端末ID 9802610110045\n取引前残高: ¥4,142\nH0Pマネー: ¥1,314\n取引後残高: ¥2,828\n先頭「#」 Pr は軽減税率文言萃対象商品です\nH0Pポイント情報 → ←\nポイント対象全額 1,217円\n通堂ポイント 12点\n累計ポイント INF 941点\n*有効期限は、 最後のポイント加点\nからЗ年間です.\nカードN0. *********8704\nレシートN04835 店₦000110\nパママニャ",
+  "text_blocks": {
+    "0": "ALPLAZA アル・プラザ",
+    "1": "草津",
+    "2": "TEL077-561-6200",
+    "3": "登録番号 T3160001008726",
+    "4": "領収証",
+    "5": "お買い上げありがとうございました",
+    "6": "2024年02月26日（月）12:38 45 ﾚｼﾞ0045",
+    "7": "責No 45セルフレジ",
+    "8": "#味わう肉厚焼売 ¥398",
+    "9": "値引 10% -40",
+    "10": "#鶏もも唐揚げ ¥461",
+    "11": "値引 10% -47",
+    "12": "#１０品目具材の春巻 ¥208",
+    "13": "値引 10% -21",
+    "14": "♯ダノンプチダノンみか ¥258",
+    "15": "小計 ¥1,217",
+    "16": "軽減8%対象額 ¥1,314",
+    "17": "（内消費税等） ¥97",
+    "18": "合計 ¥1,314",
+    "19": "HOPマネー ¥1,314",
+    "20": "お買上点数 4点",
+    "21": "HOPマネー情報",
+    "22": "カートﾞNo. *********8704",
+    "23": "センター取引番号 8026659429",
+    "24": "伝票番号 00734",
+    "25": "ハﾞリューカートﾞ端末ID 9802610110045",
+    "26": "取引前残高: ¥4,142",
+    "27": "HOPマネー: ¥1,314",
+    "28": "取引後残高: ¥2,828",
+    "29": "先頭「#」 Pr は軽減税率文言萃対象商品です",
+    "30": "HOPポイント情報 → ←",
+    "31": "ポイント対象全額 1,217円",
+    "32": "通堂ポイント 12点",
+    "33": "累計ポイント INF 941点",
+    "34": "＊有効期限は、 最後のポイント加点",
+    "35": "からЗ年間です.",
+    "36": "カートﾞNo. *********8704",
+    "37": "ﾚｼーﾄNo4835 店₦o00110",
+    "38": "ﾊﾟﾏﾏﾆｬ"
+  },
+  "review_states": {
+    "title": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "corporate_id": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "company": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "total": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "subtotal": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "deposit": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "eight_pct_tax": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "ten_pct_tax": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "change_amnt": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "date": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "time": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "zip": {
+      "correct": true,
+      "corrected_value": ""
+    },
+    "tel": {
+      "correct": true,
+      "corrected_value": ""
+    }
+  }
+}

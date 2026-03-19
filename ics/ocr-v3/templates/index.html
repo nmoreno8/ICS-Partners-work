@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCR Document Reviewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f12;
+    --surface: #13161b;
+    --border:  #1e2530;
+    --border2: #2a3344;
+    --text:    #c8d0dc;
+    --muted:   #4a5568;
+    --accent:  #3b82f6;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #f59e0b;
+    --dim:     #2d3748;
+    --mono:    'IBM Plex Mono', monospace;
+    --sans:    'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans);
+         font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  header { display: flex; align-items: center; justify-content: space-between;
+           padding: 0 20px; height: 50px; border-bottom: 1px solid var(--border);
+           background: var(--surface); flex-shrink: 0; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600;
+          letter-spacing: .12em; color: var(--accent); }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  button { font-family: var(--mono); font-size: 11px; font-weight: 500;
+           letter-spacing: .06em; cursor: pointer; border: none; border-radius: 4px;
+           padding: 7px 14px; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-green { background: #16532a; color: var(--green); border: 1px solid #22c55e44; }
+  .btn-green:hover { background: #166534; }
+  .btn-sm { padding: 4px 10px; font-size: 10px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .btn-correct {
+    width: 34px; height: 30px; padding: 0; font-size: 15px; border-radius: 4px;
+    background: #0d1f12; color: #4a5568; border: 1px solid #1e2530;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .btn-correct:hover  { background: #14532d44; color: var(--green); border-color: #22c55e44; }
+  .btn-correct.active { background: #166534; color: var(--green); border-color: var(--green);
+                        box-shadow: 0 0 0 2px #22c55e22; }
+
+  .btn-wrong {
+    width: 34px; height: 30px; padding: 0; font-size: 15px; border-radius: 4px;
+    background: #0d1f12; color: #4a5568; border: 1px solid #1e2530;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .btn-wrong:hover  { background: #7f1d1d44; color: var(--red); border-color: #ef444433; }
+  .btn-wrong.active { background: #991b1b; color: var(--red); border-color: var(--red);
+                      box-shadow: 0 0 0 2px #ef444422; }
+
+  .workspace { display: flex; flex: 1; overflow: hidden; }
+
+  .sidebar { width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+             display: flex; flex-direction: column; background: var(--surface); }
+  .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border);
+                    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+                    color: var(--muted); text-transform: uppercase;
+                    display: flex; justify-content: space-between; align-items: center; }
+  .file-count { background: var(--dim); color: var(--accent);
+                border-radius: 10px; padding: 1px 7px; font-size: 10px; }
+  .file-list  { flex: 1; overflow-y: auto; }
+  .file-item  { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+                display: flex; flex-direction: column; gap: 3px; transition: background .1s; }
+  .file-item:hover  { background: var(--dim); }
+  .file-item.active { background: #1a2540; border-left: 2px solid var(--accent); }
+  .file-item .fname { font-family: var(--mono); font-size: 11px; color: var(--text);
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-item .fmeta { display: flex; gap: 6px; align-items: center; }
+  .acc-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
+  .acc-high { background: #14532d44; color: var(--green); border: 1px solid #22c55e33; }
+  .acc-mid  { background: #78350f44; color: var(--yellow); border: 1px solid #f59e0b33; }
+  .acc-low  { background: #7f1d1d44; color: var(--red);    border: 1px solid #ef444433; }
+  .field-badge { font-family: var(--mono); font-size: 9px; color: var(--muted);
+                 background: var(--dim); padding: 1px 5px; border-radius: 3px; }
+
+  .folder-bar { padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .folder-bar input { width: 100%; background: var(--bg); border: 1px solid var(--border2);
+                      color: var(--text); padding: 6px 8px; border-radius: 4px;
+                      font-family: var(--mono); font-size: 10px; margin-bottom: 6px; }
+  .folder-bar input:focus { outline: none; border-color: var(--accent); }
+
+  .viewer { flex: 1; display: flex; overflow: hidden; }
+  .image-panel { flex: 0 0 42%; border-right: 1px solid var(--border);
+                 display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 10px 16px; border-bottom: 1px solid var(--border);
+                  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+                  color: var(--muted); text-transform: uppercase; flex-shrink: 0;
+                  display: flex; justify-content: space-between; align-items: center; }
+  .image-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start;
+                justify-content: center; padding: 16px; background: #090b0e; }
+  .image-wrap img { max-width: 100%; border-radius: 4px; box-shadow: 0 8px 40px #00000080; }
+
+  .table-panel  { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .table-scroll { flex: 1; overflow-y: auto; }
+
+  .accuracy-bar { padding: 10px 16px; border-bottom: 1px solid var(--border);
+                  display: flex; align-items: center; gap: 14px; flex-shrink: 0; flex-wrap: wrap; }
+  .acc-label    { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .acc-value    { font-family: var(--mono); font-size: 18px; font-weight: 600; min-width: 58px; }
+  .progress-track { flex: 1; min-width: 60px; height: 4px; background: var(--dim);
+                    border-radius: 2px; overflow: hidden; }
+  .progress-fill  { height: 100%; border-radius: 2px; transition: width .4s, background .4s; }
+  .meta-pills { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .pill { font-family: var(--mono); font-size: 10px; color: var(--muted);
+          background: var(--dim); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .pill span { color: var(--text); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 9px 14px; text-align: left; font-family: var(--mono); font-size: 10px;
+       letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+       border-bottom: 1px solid var(--border); background: var(--surface);
+       position: sticky; top: 0; z-index: 2; }
+  td { padding: 8px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: #0f1318; }
+  tr.row-incorrect td { background: #160d0d; }
+  tr.row-incorrect:hover td { background: #1c1010; }
+
+  .field-label { font-family: var(--mono); font-size: 11px; color: #8b9bb4; }
+  .field-key   { font-family: var(--mono); font-size: 9px; color: var(--muted);
+                 display: block; margin-top: 2px; }
+  .field-value { font-family: var(--mono); font-size: 11px; color: var(--text); word-break: break-all; }
+  .not-found   { font-family: var(--mono); font-size: 11px; color: var(--muted); font-style: italic; }
+
+  .verdict-btns { display: flex; gap: 5px; }
+
+  .corr-cell  { display: flex; gap: 6px; align-items: center; }
+  .corr-input { background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+                padding: 4px 8px; border-radius: 3px; font-family: var(--mono);
+                font-size: 11px; width: 150px; transition: border .15s; }
+  .corr-input:focus    { outline: none; border-color: var(--accent); }
+  .corr-input:disabled { opacity: .3; cursor: not-allowed; }
+
+  .btn-save { padding: 4px 10px; font-size: 10px; background: var(--accent); color: #fff;
+              border-radius: 3px; font-family: var(--mono); font-weight: 600;
+              border: none; cursor: pointer; transition: background .15s; }
+  .btn-save:hover    { background: #2563eb; }
+  .btn-save:disabled { opacity: .3; cursor: not-allowed; }
+
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 12px; color: var(--muted); }
+  .empty-icon { font-size: 36px; opacity: .3; }
+  .empty-text { font-family: var(--mono); font-size: 12px; letter-spacing: .05em; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+
+  #toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px;
+           background: var(--surface); border: 1px solid var(--border2); border-radius: 6px;
+           font-family: var(--mono); font-size: 11px; color: var(--text);
+           opacity: 0; transition: opacity .25s; pointer-events: none;
+           box-shadow: 0 4px 20px #00000060; z-index: 100; }
+  #toast.show { opacity: 1; }
+  #toast.ok  { border-color: var(--green); color: var(--green); }
+  #toast.err { border-color: var(--red);   color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">OCR<span>/</span>REVIEWER <span style="font-size:10px;margin-left:8px;">DOCUMENT BENCHMARK TOOL</span></div>
+  <div class="header-actions">
+    <span id="nav-info" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+    <button class="btn-ghost btn-sm" id="btn-prev" onclick="navigate(-1)" disabled>◀ PREV</button>
+    <button class="btn-ghost btn-sm" id="btn-next" onclick="navigate(1)"  disabled>NEXT ▶</button>
+    <button class="btn-green btn-sm" id="btn-export" onclick="exportCSV()" disabled>⬇ EXPORT CSV</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      Files <span id="file-count" class="file-count">0</span>
+    </div>
+    <div class="file-list" id="file-list"></div>
+    <div class="folder-bar">
+      <input type="text" id="folder-input" placeholder="/path/to/documents folder" />
+      <button class="btn-primary" style="width:100%" onclick="loadFolder()">LOAD FOLDER</button>
+    </div>
+  </aside>
+
+  <div class="viewer">
+    <!-- Image -->
+    <div class="image-panel">
+      <div class="panel-header">
+        <span>DOCUMENT IMAGE</span>
+        <span id="img-filename" style="color:var(--text);font-size:10px"></span>
+      </div>
+      <div class="image-wrap" id="image-wrap">
+        <div class="empty-state">
+          <div class="empty-icon">🧾</div>
+          <div class="empty-text">SELECT A FILE TO BEGIN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-panel">
+      <div class="panel-header" style="border-bottom:none">
+        <span>PREDICTED FIELDS</span>
+        <span id="table-subtitle" style="color:var(--muted)"></span>
+      </div>
+
+      <div class="accuracy-bar" id="accuracy-bar" style="display:none">
+        <span class="acc-label">Accuracy</span>
+        <span class="acc-value" id="acc-value">100%</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width:100%;background:var(--green)"></div>
+        </div>
+        <div class="meta-pills">
+          <span class="pill" id="pill-fields">fields: <span>—</span></span>
+          <span class="pill" id="pill-conf" style="display:none">conf: <span>—</span></span>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <div class="empty-state" id="table-empty">
+          <div class="empty-icon" style="font-size:24px">📋</div>
+          <div class="empty-text">NO DATA LOADED</div>
+        </div>
+        <table id="data-table" style="display:none">
+          <thead>
+            <tr>
+              <th style="width:22%">Field</th>
+              <th style="width:24%">Predicted Value</th>
+              <th style="width:14%">Correct?</th>
+              <th style="width:40%">Correct Value</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let files    = [];
+let current  = -1;
+let stemData = {};
+
+async function loadFolder() {
+  const folder = document.getElementById('folder-input').value.trim();
+  if (!folder) { toast('Enter a folder path', 'err'); return; }
+  const res  = await fetch('/api/folder', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ folder })
+  });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'err'); return; }
+  files = data.pairs;
+  document.getElementById('file-count').textContent = files.length;
+  document.getElementById('btn-export').disabled = files.length === 0;
+  document.getElementById('btn-prev').disabled   = true;
+  document.getElementById('btn-next').disabled   = files.length <= 1;
+  const listRes  = await fetch('/api/files');
+  const listData = await listRes.json();
+  listData.pairs.forEach(p => {
+    if (!stemData[p.id]) stemData[p.id] = {};
+    stemData[p.id].accuracy = p.accuracy;
+  });
+  renderSidebar();
+  if (files.length) loadFile(0);
+  toast(`Loaded ${files.length} file(s)`, 'ok');
+}
+
+function renderSidebar() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = files.map((f, i) => {
+    const d   = stemData[f.id];
+    const acc = d ? d.accuracy : null;
+    const cls = acc === null ? '' : acc >= 80 ? 'acc-high' : acc >= 60 ? 'acc-mid' : 'acc-low';
+    const badge = acc !== null ? `<span class="acc-badge ${cls}">${acc}%</span>` : '';
+    const fcount = d && d.field_count ? `<span class="field-badge">${d.field_count} fields</span>` : '';
+    return `<div class="file-item ${i === current ? 'active' : ''}" onclick="loadFile(${i})">
+      <span class="fname">${f.id}</span>
+      <div class="fmeta">${badge}${fcount}</div>
+    </div>`;
+  }).join('');
+}
+
+async function loadFile(idx) {
+  current = idx;
+  const f   = files[idx];
+  const res = await fetch(`/api/load/${f.id}`);
+  const d   = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  stemData[f.id] = d;
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === files.length - 1;
+  document.getElementById('nav-info').textContent = `${idx + 1} / ${files.length}`;
+  document.getElementById('image-wrap').innerHTML = `<img src="${d.image}" alt="Document" />`;
+  document.getElementById('img-filename').textContent = f.id;
+  renderTable(d);
+  renderSidebar();
+}
+
+function navigate(dir) {
+  const n = current + dir;
+  if (n >= 0 && n < files.length) loadFile(n);
+}
+
+function renderTable(d) {
+  document.getElementById('table-empty').style.display  = 'none';
+  document.getElementById('data-table').style.display   = 'table';
+  document.getElementById('accuracy-bar').style.display = 'flex';
+  updateAccuracy(d.accuracy, d.conf, d.field_count);
+  document.getElementById('table-subtitle').textContent = d.fileName.split(/[\\\\/]/).pop();
+  const stem = files[current].id;
+  document.getElementById('table-body').innerHTML = d.rows.map(r => rowHTML(stem, r)).join('');
+}
+
+function rowHTML(stem, r) {
+  const NOT_FOUND_VALS = ['NOT_FOUND', 'NOT_FOUND_ZIP', ''];
+  const isNotFound = NOT_FOUND_VALS.includes(r.value);
+  const displayVal = isNotFound
+    ? `<span class="not-found">NOT_FOUND</span>`
+    : `<span class="field-value">${escHtml(r.value)}</span>`;
+
+  const isWrong = !r.correct;
+  const corrVal = escAttr(r.corrected_value || '');
+
+  return `<tr id="row-${r.key}" class="${isWrong ? 'row-incorrect' : ''}">
+    <td>
+      <span class="field-label">${escHtml(r.label)}</span>
+      <span class="field-key">${escHtml(r.key)}</span>
+    </td>
+    <td>${displayVal}</td>
+    <td>
+      <div class="verdict-btns">
+        <button class="btn-correct ${!isWrong ? 'active' : ''}"
+                id="btn-chk-${r.key}"
+                onclick="markCorrect('${stem}','${r.key}')"
+                title="Correct — no change needed">✓</button>
+        <button class="btn-wrong ${isWrong ? 'active' : ''}"
+                id="btn-x-${r.key}"
+                onclick="markWrong('${r.key}')"
+                title="Incorrect — enter correct value">✗</button>
+      </div>
+    </td>
+    <td>
+      <div class="corr-cell">
+        <input class="corr-input"
+               id="input-${r.key}"
+               value="${corrVal}"
+               placeholder="${isWrong ? 'Enter correct value…' : '—'}"
+               ${!isWrong ? 'disabled' : ''}
+               onkeydown="if(event.key==='Enter') saveCorrection('${stem}','${r.key}')"/>
+        <button class="btn-save"
+                id="save-${r.key}"
+                onclick="saveCorrection('${stem}','${r.key}')"
+                ${!isWrong ? 'disabled' : ''}>SAVE</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+async function markCorrect(stem, key) {
+  const res = await fetch(`/api/mark/${stem}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ key })
+  });
+  const d = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  document.getElementById(`row-${key}`).className = '';
+  document.getElementById(`btn-chk-${key}`).classList.add('active');
+  document.getElementById(`btn-x-${key}`).classList.remove('active');
+  const inp = document.getElementById(`input-${key}`);
+  const btn = document.getElementById(`save-${key}`);
+  inp.disabled    = true;
+  inp.placeholder = '—';
+  btn.disabled    = true;
+  stemData[files[current].id].accuracy = d.accuracy;
+  updateAccuracy(d.accuracy, stemData[files[current].id].conf,
+                 stemData[files[current].id].field_count);
+  renderSidebar();
+  toast('Marked correct ✓  —  accuracy unchanged', 'ok');
+}
+
+function markWrong(key) {
+  document.getElementById(`row-${key}`).className = 'row-incorrect';
+  document.getElementById(`btn-chk-${key}`).classList.remove('active');
+  document.getElementById(`btn-x-${key}`).classList.add('active');
+  const inp = document.getElementById(`input-${key}`);
+  const btn = document.getElementById(`save-${key}`);
+  inp.disabled    = false;
+  inp.placeholder = 'Enter correct value…';
+  btn.disabled    = false;
+  inp.focus();
+}
+
+async function saveCorrection(stem, key) {
+  const corrVal = document.getElementById(`input-${key}`).value.trim();
+  const res = await fetch(`/api/save/${stem}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ key, corrected_value: corrVal })
+  });
+  const d = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  stemData[files[current].id].accuracy = d.accuracy;
+  updateAccuracy(d.accuracy, stemData[files[current].id].conf,
+                 stemData[files[current].id].field_count);
+  renderSidebar();
+  toast(`Saved  —  accuracy now ${d.accuracy}%`, 'ok');
+}
+
+function updateAccuracy(acc, conf, fieldCount) {
+  const el   = document.getElementById('acc-value');
+  const fill = document.getElementById('progress-fill');
+  el.textContent        = acc + '%';
+  el.style.color        = acc >= 80 ? 'var(--green)' : acc >= 60 ? 'var(--yellow)' : 'var(--red)';
+  fill.style.width      = acc + '%';
+  fill.style.background = acc >= 80 ? 'var(--green)' : acc >= 60 ? 'var(--yellow)' : 'var(--red)';
+
+  // Field count pill
+  if (fieldCount) {
+    const fp = document.getElementById('pill-fields');
+    fp.innerHTML = `fields: <span>${fieldCount}</span>`;
+  }
+
+  // Model confidence pill — only show if available
+  const cp = document.getElementById('pill-conf');
+  if (conf !== null && conf !== undefined && conf !== 0) {
+    cp.style.display = 'inline-block';
+    cp.innerHTML = `model conf: <span>${conf}%</span>`;
+  } else {
+    cp.style.display = 'none';
+  }
+}
+
+function exportCSV() {
+  window.location.href = '/api/export';
+  toast('Downloading CSV…', 'ok');
+}
+
+// Helpers to prevent XSS
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(s) { return escHtml(s); }
+
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/files').then(r => r.json()).then(data => {
+    if (!data.pairs || !data.pairs.length) return;
+    files = data.pairs.map(p => ({ id: p.id }));
+    data.pairs.forEach(p => { stemData[p.id] = { accuracy: p.accuracy }; });
+    document.getElementById('file-count').textContent = files.length;
+    document.getElementById('btn-export').disabled    = false;
+    document.getElementById('btn-next').disabled      = files.length <= 1;
+    renderSidebar();
+    loadFile(0);
+  }).catch(() => {});
+});
+</script>
+</body>
+</html>
