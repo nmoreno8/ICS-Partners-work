@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCR Document Reviewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0f12;
+    --surface: #13161b;
+    --border:  #1e2530;
+    --border2: #2a3344;
+    --text:    #c8d0dc;
+    --muted:   #4a5568;
+    --accent:  #3b82f6;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --yellow:  #f59e0b;
+    --dim:     #2d3748;
+    --mono:    'IBM Plex Mono', monospace;
+    --sans:    'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans);
+         font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /*  Header  */
+  header { display: flex; align-items: center; justify-content: space-between;
+           padding: 0 20px; height: 50px; border-bottom: 1px solid var(--border);
+           background: var(--surface); flex-shrink: 0; }
+  .logo { font-family: var(--mono); font-size: 13px; font-weight: 600;
+          letter-spacing: .12em; color: var(--accent); }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /*  Buttons  */
+  button { font-family: var(--mono); font-size: 11px; font-weight: 500;
+           letter-spacing: .06em; cursor: pointer; border: none; border-radius: 4px;
+           padding: 7px 14px; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border2); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-green { background: #16532a; color: var(--green); border: 1px solid #22c55e44; }
+  .btn-green:hover { background: #166534; }
+  .btn-purple { background: #2e1065; color: #a78bfa; border: 1px solid #7c3aed44; }
+  .btn-purple:hover { background: #3b0764; }
+  .btn-amber  { background: #451a03; color: #fbbf24; border: 1px solid #d9770644; }
+  .btn-amber:hover  { background: #78350f; }
+  .btn-sm { padding: 4px 10px; font-size: 10px; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .btn-correct {
+    width: 34px; height: 30px; padding: 0; font-size: 15px; border-radius: 4px;
+    background: #0d1f12; color: #4a5568; border: 1px solid #1e2530;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .btn-correct:hover  { background: #14532d44; color: var(--green); border-color: #22c55e44; }
+  .btn-correct.active { background: #166534; color: var(--green); border-color: var(--green);
+                        box-shadow: 0 0 0 2px #22c55e22; }
+  .btn-wrong {
+    width: 34px; height: 30px; padding: 0; font-size: 15px; border-radius: 4px;
+    background: #0d1f12; color: #4a5568; border: 1px solid #1e2530;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .btn-wrong:hover  { background: #7f1d1d44; color: var(--red); border-color: #ef444433; }
+  .btn-wrong.active { background: #991b1b; color: var(--red); border-color: var(--red);
+                      box-shadow: 0 0 0 2px #ef444422; }
+
+  /*  Layout  */
+  .workspace { display: flex; flex: 1; overflow: hidden; }
+
+  /*  Sidebar  */
+  .sidebar { width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+             display: flex; flex-direction: column; background: var(--surface); }
+  .sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border);
+                    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+                    color: var(--muted); text-transform: uppercase;
+                    display: flex; justify-content: space-between; align-items: center; }
+  .file-count { background: var(--dim); color: var(--accent);
+                border-radius: 10px; padding: 1px 7px; font-size: 10px; }
+  .file-list  { flex: 1; overflow-y: auto; }
+  .file-item  { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border);
+                display: flex; flex-direction: column; gap: 3px; transition: background .1s; }
+  .file-item:hover  { background: var(--dim); }
+  .file-item.active { background: #1a2540; border-left: 2px solid var(--accent); }
+  .file-item .fname { font-family: var(--mono); font-size: 11px; color: var(--text);
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-item .fmeta { display: flex; gap: 6px; align-items: center; }
+  .acc-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; }
+  .acc-high { background: #14532d44; color: var(--green); border: 1px solid #22c55e33; }
+  .acc-mid  { background: #78350f44; color: var(--yellow); border: 1px solid #f59e0b33; }
+  .acc-low  { background: #7f1d1d44; color: var(--red);    border: 1px solid #ef444433; }
+  .field-badge { font-family: var(--mono); font-size: 9px; color: var(--muted);
+                 background: var(--dim); padding: 1px 5px; border-radius: 3px; }
+
+  .folder-bar { padding: 10px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .folder-bar input { width: 100%; background: var(--bg); border: 1px solid var(--border2);
+                      color: var(--text); padding: 6px 8px; border-radius: 4px;
+                      font-family: var(--mono); font-size: 10px; margin-bottom: 6px; }
+  .folder-bar input:focus { outline: none; border-color: var(--accent); }
+
+  /*  Viewer  */
+  .viewer { flex: 1; display: flex; overflow: hidden; }
+  .image-panel { flex: 0 0 42%; border-right: 1px solid var(--border);
+                 display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 10px 16px; border-bottom: 1px solid var(--border);
+                  font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+                  color: var(--muted); text-transform: uppercase; flex-shrink: 0;
+                  display: flex; justify-content: space-between; align-items: center; }
+  .image-wrap { flex: 1; overflow: auto; display: flex; align-items: flex-start;
+                justify-content: center; padding: 16px; background: #090b0e; }
+  .image-wrap img { max-width: 100%; border-radius: 4px; box-shadow: 0 8px 40px #00000080; }
+
+  .table-panel  { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .table-scroll { flex: 1; overflow-y: auto; }
+
+  /*  Accuracy bar  */
+  .accuracy-bar { padding: 10px 16px; border-bottom: 1px solid var(--border);
+                  display: flex; align-items: center; gap: 14px; flex-shrink: 0; flex-wrap: wrap; }
+  .acc-label    { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .acc-value    { font-family: var(--mono); font-size: 18px; font-weight: 600; min-width: 58px; }
+  .progress-track { flex: 1; min-width: 60px; height: 4px; background: var(--dim);
+                    border-radius: 2px; overflow: hidden; }
+  .progress-fill  { height: 100%; border-radius: 2px; transition: width .4s, background .4s; }
+  .meta-pills { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .pill { font-family: var(--mono); font-size: 10px; color: var(--muted);
+          background: var(--dim); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .pill span { color: var(--text); }
+
+  /*  Table  */
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 9px 14px; text-align: left; font-family: var(--mono); font-size: 10px;
+       letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+       border-bottom: 1px solid var(--border); background: var(--surface);
+       position: sticky; top: 0; z-index: 2; }
+  td { padding: 8px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: #0f1318; }
+  tr.row-incorrect td { background: #160d0d; }
+  tr.row-incorrect:hover td { background: #1c1010; }
+  .field-label { font-family: var(--mono); font-size: 11px; color: #8b9bb4; }
+  .field-key   { font-family: var(--mono); font-size: 9px; color: var(--muted); display: block; margin-top: 2px; }
+  .field-value { font-family: var(--mono); font-size: 11px; color: var(--text); word-break: break-all; }
+  .not-found   { font-family: var(--mono); font-size: 11px; color: var(--muted); font-style: italic; }
+  .verdict-btns { display: flex; gap: 5px; }
+  .corr-cell  { display: flex; gap: 6px; align-items: center; }
+  .corr-input { background: var(--bg); border: 1px solid var(--border2); color: var(--text);
+                padding: 4px 8px; border-radius: 3px; font-family: var(--mono);
+                font-size: 11px; width: 150px; transition: border .15s; }
+  .corr-input:focus    { outline: none; border-color: var(--accent); }
+  .corr-input:disabled { opacity: .3; cursor: not-allowed; }
+  .btn-save { padding: 4px 10px; font-size: 10px; background: var(--accent); color: #fff;
+              border-radius: 3px; font-family: var(--mono); font-weight: 600;
+              border: none; cursor: pointer; transition: background .15s; }
+  .btn-save:hover    { background: #2563eb; }
+  .btn-save:disabled { opacity: .3; cursor: not-allowed; }
+
+  /*  Empty state  */
+  .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center;
+                 justify-content: center; gap: 12px; color: var(--muted); }
+  .empty-icon { font-size: 36px; opacity: .3; }
+  .empty-text { font-family: var(--mono); font-size: 12px; letter-spacing: .05em; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+
+  /*  Toast  */
+  #toast { position: fixed; bottom: 20px; right: 20px; padding: 10px 18px;
+           background: var(--surface); border: 1px solid var(--border2); border-radius: 6px;
+           font-family: var(--mono); font-size: 11px; color: var(--text);
+           opacity: 0; transition: opacity .25s; pointer-events: none;
+           box-shadow: 0 4px 20px #00000060; z-index: 200; }
+  #toast.show { opacity: 1; }
+  #toast.ok  { border-color: var(--green); color: var(--green); }
+  #toast.err { border-color: var(--red);   color: var(--red); }
+
+  /*  Stats Modal  */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: #00000090;
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 8px;
+    width: 780px; max-width: 95vw; max-height: 88vh;
+    display: flex; flex-direction: column; box-shadow: 0 24px 80px #00000090;
+  }
+  .modal-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+  }
+  .modal-title { font-family: var(--mono); font-size: 13px; font-weight: 600;
+                 letter-spacing: .08em; color: var(--text); }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 18px;
+                 cursor: pointer; padding: 0 4px; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+  /* Overall accuracy card */
+  .stat-card {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .stat-big { font-family: var(--mono); font-size: 42px; font-weight: 600; line-height: 1; }
+  .stat-detail { display: flex; flex-direction: column; gap: 6px; }
+  .stat-row { display: flex; gap: 24px; }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; }
+  .stat-item .s-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+                        letter-spacing: .1em; color: var(--muted); }
+  .stat-item .s-value { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* Overall progress bar */
+  .overall-bar { height: 6px; background: var(--dim); border-radius: 3px; overflow: hidden; flex: 1; }
+  .overall-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+
+  /* Section headings inside modal */
+  .section-title { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+                   text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+                   padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+  /* Per-file table */
+  .stats-table { width: 100%; border-collapse: collapse; }
+  .stats-table th { font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+                    text-transform: uppercase; color: var(--muted); padding: 6px 10px;
+                    border-bottom: 1px solid var(--border); text-align: left; background: var(--bg); }
+  .stats-table td { font-family: var(--mono); font-size: 11px; padding: 7px 10px;
+                    border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .stats-table tr:last-child td { border-bottom: none; }
+  .stats-table tr:hover td { background: #0f1318; }
+
+  /* Mini bar used in stats table */
+  .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mini-bar { flex: 1; height: 4px; background: var(--dim); border-radius: 2px; overflow: hidden; min-width: 60px; }
+  .mini-fill { height: 100%; border-radius: 2px; }
+  .mini-pct  { font-family: var(--mono); font-size: 10px; min-width: 36px; text-align: right; }
+
+  .tag-correct   { color: var(--green); }
+  .tag-incorrect { color: var(--red); }
+  .tag-muted     { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">OCR<span>/</span>REVIEWER <span style="font-size:10px;margin-left:8px;">DOCUMENT BENCHMARK TOOL</span></div>
+  <div class="header-actions">
+    <span id="nav-info" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+    <button class="btn-ghost btn-sm" id="btn-prev" onclick="navigate(-1)" disabled>◀ PREV</button>
+    <button class="btn-ghost btn-sm" id="btn-next" onclick="navigate(1)"  disabled>NEXT ▶</button>
+    <button class="btn-amber  btn-sm" id="btn-stats"  onclick="openStats()"   disabled>📊 STATS</button>
+    <button class="btn-purple btn-sm" id="btn-exportj" onclick="exportJSON()" disabled>⬇ EXPORT JSON</button>
+    <button class="btn-green  btn-sm" id="btn-export"  onclick="exportCSV()"  disabled>⬇ EXPORT CSV</button>
+  </div>
+</header>
+
+<div class="workspace">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      Files <span id="file-count" class="file-count">0</span>
+    </div>
+    <div class="file-list" id="file-list"></div>
+    <div class="folder-bar">
+      <input type="text" id="folder-input" placeholder="/path/to/documents folder" />
+      <button class="btn-primary" style="width:100%" onclick="loadFolder()">LOAD FOLDER</button>
+    </div>
+  </aside>
+
+  <div class="viewer">
+    <!-- Image -->
+    <div class="image-panel">
+      <div class="panel-header">
+        <span>DOCUMENT IMAGE</span>
+        <span id="img-filename" style="color:var(--text);font-size:10px"></span>
+      </div>
+      <div class="image-wrap" id="image-wrap">
+        <div class="empty-state">
+          <div class="empty-icon">🧾</div>
+          <div class="empty-text">SELECT A FILE TO BEGIN</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-panel">
+      <div class="panel-header" style="border-bottom:none">
+        <span>PREDICTED FIELDS</span>
+        <span id="table-subtitle" style="color:var(--muted)"></span>
+      </div>
+      <div class="accuracy-bar" id="accuracy-bar" style="display:none">
+        <span class="acc-label">Accuracy</span>
+        <span class="acc-value" id="acc-value">100%</span>
+        <div class="progress-track">
+          <div class="progress-fill" id="progress-fill" style="width:100%;background:var(--green)"></div>
+        </div>
+        <div class="meta-pills">
+          <span class="pill" id="pill-fields">fields: <span>—</span></span>
+          <span class="pill" id="pill-conf" style="display:none">conf: <span>—</span></span>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <div class="empty-state" id="table-empty">
+          <div class="empty-icon" style="font-size:24px">📋</div>
+          <div class="empty-text">NO DATA LOADED</div>
+        </div>
+        <table id="data-table" style="display:none">
+          <thead>
+            <tr>
+              <th style="width:22%">Field</th>
+              <th style="width:24%">Predicted Value</th>
+              <th style="width:14%">Correct?</th>
+              <th style="width:40%">Correct Value</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--  Stats Modal  -->
+<div class="modal-overlay" id="stats-modal" onclick="closeStatsOnOverlay(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📊 ACCURACY STATISTICS</span>
+      <button class="modal-close" onclick="closeStats()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="empty-state" style="min-height:200px">
+        <div class="empty-text">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let files    = [];
+let current  = -1;
+let stemData = {};
+
+//  Folder load :
+async function loadFolder() {
+  const folder = document.getElementById('folder-input').value.trim();
+  if (!folder) { toast('Enter a folder path', 'err'); return; }
+  const res  = await fetch('/api/folder', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ folder })
+  });
+  const data = await res.json();
+  if (data.error) { toast(data.error, 'err'); return; }
+  files = data.pairs;
+  document.getElementById('file-count').textContent = files.length;
+  const hasFiles = files.length > 0;
+  document.getElementById('btn-export').disabled  = !hasFiles;
+  document.getElementById('btn-exportj').disabled = !hasFiles;
+  document.getElementById('btn-stats').disabled   = !hasFiles;
+  document.getElementById('btn-prev').disabled    = true;
+  document.getElementById('btn-next').disabled    = files.length <= 1;
+  const listRes  = await fetch('/api/files');
+  const listData = await listRes.json();
+  listData.pairs.forEach(p => {
+    if (!stemData[p.id]) stemData[p.id] = {};
+    stemData[p.id].accuracy = p.accuracy;
+  });
+  renderSidebar();
+  if (hasFiles) loadFile(0);
+  toast(`Loaded ${files.length} file(s)`, 'ok');
+}
+
+//  Sidebar:
+function renderSidebar() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = files.map((f, i) => {
+    const d   = stemData[f.id];
+    const acc = d ? d.accuracy : null;
+    const cls = acc === null ? '' : acc >= 80 ? 'acc-high' : acc >= 60 ? 'acc-mid' : 'acc-low';
+    const badge  = acc !== null ? `<span class="acc-badge ${cls}">${acc}%</span>` : '';
+    const fcount = d && d.field_count ? `<span class="field-badge">${d.field_count} fields</span>` : '';
+    return `<div class="file-item ${i === current ? 'active' : ''}" onclick="loadFile(${i})">
+      <span class="fname">${f.id}</span>
+      <div class="fmeta">${badge}${fcount}</div>
+    </div>`;
+  }).join('');
+}
+
+// File load:
+async function loadFile(idx) {
+  current = idx;
+  const f   = files[idx];
+  const res = await fetch(`/api/load/${f.id}`);
+  const d   = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  stemData[f.id] = d;
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === files.length - 1;
+  document.getElementById('nav-info').textContent = `${idx + 1} / ${files.length}`;
+  document.getElementById('image-wrap').innerHTML = `<img src="${d.image}" alt="Document" />`;
+  document.getElementById('img-filename').textContent = f.id;
+  renderTable(d);
+  renderSidebar();
+}
+
+function navigate(dir) {
+  const n = current + dir;
+  if (n >= 0 && n < files.length) loadFile(n);
+}
+
+// Table render :
+function renderTable(d) {
+  document.getElementById('table-empty').style.display  = 'none';
+  document.getElementById('data-table').style.display   = 'table';
+  document.getElementById('accuracy-bar').style.display = 'flex';
+  updateAccuracy(d.accuracy, d.conf, d.field_count);
+  document.getElementById('table-subtitle').textContent = d.fileName.split(/[\\\\/]/).pop();
+  const stem = files[current].id;
+  document.getElementById('table-body').innerHTML = d.rows.map(r => rowHTML(stem, r)).join('');
+}
+
+function rowHTML(stem, r) {
+  const NOT_FOUND_VALS = ['NOT_FOUND', 'NOT_FOUND_ZIP', ''];
+  const isNotFound = NOT_FOUND_VALS.includes(r.value);
+  const displayVal = isNotFound
+    ? `<span class="not-found">NOT_FOUND</span>`
+    : `<span class="field-value">${escHtml(r.value)}</span>`;
+  const isWrong = !r.correct;
+  const corrVal = escAttr(r.corrected_value || '');
+  return `<tr id="row-${r.key}" class="${isWrong ? 'row-incorrect' : ''}">
+    <td>
+      <span class="field-label">${escHtml(r.label)}</span>
+      <span class="field-key">${escHtml(r.key)}</span>
+    </td>
+    <td>${displayVal}</td>
+    <td>
+      <div class="verdict-btns">
+        <button class="btn-correct ${!isWrong ? 'active' : ''}"
+                id="btn-chk-${r.key}"
+                onclick="markCorrect('${stem}','${r.key}')"
+                title="Correct — no change needed">✓</button>
+        <button class="btn-wrong ${isWrong ? 'active' : ''}"
+                id="btn-x-${r.key}"
+                onclick="markWrong('${r.key}')"
+                title="Incorrect — enter correct value">✗</button>
+      </div>
+    </td>
+    <td>
+      <div class="corr-cell">
+        <input class="corr-input"
+               id="input-${r.key}"
+               value="${corrVal}"
+               placeholder="${isWrong ? 'Enter correct value…' : '—'}"
+               ${!isWrong ? 'disabled' : ''}
+               onkeydown="if(event.key==='Enter') saveCorrection('${stem}','${r.key}')"/>
+        <button class="btn-save"
+                id="save-${r.key}"
+                onclick="saveCorrection('${stem}','${r.key}')"
+                ${!isWrong ? 'disabled' : ''}>SAVE</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+// Verdicts:
+async function markCorrect(stem, key) {
+  const res = await fetch(`/api/mark/${stem}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ key })
+  });
+  const d = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  document.getElementById(`row-${key}`).className = '';
+  document.getElementById(`btn-chk-${key}`).classList.add('active');
+  document.getElementById(`btn-x-${key}`).classList.remove('active');
+  const inp = document.getElementById(`input-${key}`);
+  const btn = document.getElementById(`save-${key}`);
+  inp.disabled = true; inp.placeholder = '—'; btn.disabled = true;
+  stemData[files[current].id].accuracy = d.accuracy;
+  updateAccuracy(d.accuracy, stemData[files[current].id].conf,
+                 stemData[files[current].id].field_count);
+  renderSidebar();
+  toast('Marked correct ✓  —  accuracy unchanged', 'ok');
+}
+
+function markWrong(key) {
+  document.getElementById(`row-${key}`).className = 'row-incorrect';
+  document.getElementById(`btn-chk-${key}`).classList.remove('active');
+  document.getElementById(`btn-x-${key}`).classList.add('active');
+  const inp = document.getElementById(`input-${key}`);
+  const btn = document.getElementById(`save-${key}`);
+  inp.disabled = false; inp.placeholder = 'Enter correct value…'; btn.disabled = false;
+  inp.focus();
+}
+
+async function saveCorrection(stem, key) {
+  const corrVal = document.getElementById(`input-${key}`).value.trim();
+  const res = await fetch(`/api/save/${stem}`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ key, corrected_value: corrVal })
+  });
+  const d = await res.json();
+  if (d.error) { toast(d.error, 'err'); return; }
+  stemData[files[current].id].accuracy = d.accuracy;
+  updateAccuracy(d.accuracy, stemData[files[current].id].conf,
+                 stemData[files[current].id].field_count);
+  renderSidebar();
+  toast(`Saved  —  accuracy now ${d.accuracy}%`, 'ok');
+}
+
+// Accuracy bar:
+function updateAccuracy(acc, conf, fieldCount) {
+  const el   = document.getElementById('acc-value');
+  const fill = document.getElementById('progress-fill');
+  el.textContent        = acc + '%';
+  el.style.color        = acc >= 80 ? 'var(--green)' : acc >= 60 ? 'var(--yellow)' : 'var(--red)';
+  fill.style.width      = acc + '%';
+  fill.style.background = acc >= 80 ? 'var(--green)' : acc >= 60 ? 'var(--yellow)' : 'var(--red)';
+  if (fieldCount) {
+    document.getElementById('pill-fields').innerHTML = `fields: <span>${fieldCount}</span>`;
+  }
+  const cp = document.getElementById('pill-conf');
+  if (conf !== null && conf !== undefined && conf !== 0) {
+    cp.style.display = 'inline-block';
+    cp.innerHTML = `model conf: <span>${conf}%</span>`;
+  } else {
+    cp.style.display = 'none';
+  }
+}
+
+// Stats model:
+function accColor(acc) {
+  return acc >= 80 ? 'var(--green)' : acc >= 60 ? 'var(--yellow)' : 'var(--red)';
+}
+
+function miniBar(acc) {
+  const col = accColor(acc);
+  return `<div class="mini-bar-wrap">
+    <div class="mini-bar"><div class="mini-fill" style="width:${acc}%;background:${col}"></div></div>
+    <span class="mini-pct" style="color:${col}">${acc}%</span>
+  </div>`;
+}
+
+async function openStats() {
+  document.getElementById('stats-modal').classList.add('open');
+  document.getElementById('modal-body').innerHTML =
+    `<div class="empty-state" style="min-height:200px"><div class="empty-text">Loading…</div></div>`;
+
+  const res  = await fetch('/api/stats');
+  const data = await res.json();
+  if (data.error) {
+    document.getElementById('modal-body').innerHTML =
+      `<div style="color:var(--red);font-family:var(--mono);font-size:12px">${data.error}</div>`;
+    return;
+  }
+
+  const overallCol = accColor(data.overall_accuracy);
+
+  //  Overall card:
+  const cardHTML = `
+  <div>
+    <div class="stat-card">
+      <div class="stat-big" style="color:${overallCol}">${data.overall_accuracy}%</div>
+      <div class="stat-detail" style="flex:1">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">Overall Average Accuracy</div>
+        <div class="overall-bar">
+          <div class="overall-fill" style="width:${data.overall_accuracy}%;background:${overallCol}"></div>
+        </div>
+        <div class="stat-row" style="margin-top:12px">
+          <div class="stat-item">
+            <span class="s-label">Total Files</span>
+            <span class="s-value">${data.total_files}</span>
+          </div>
+          <div class="stat-item">
+            <span class="s-label">Reviewed</span>
+            <span class="s-value">${data.reviewed_files}</span>
+          </div>
+          <div class="stat-item">
+            <span class="s-label">Pending</span>
+            <span class="s-value tag-muted">${data.total_files - data.reviewed_files}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  //  Per-file table:
+  const perFileRows = data.per_file.map(f => `
+    <tr>
+      <td style="color:var(--text)">${escHtml(f.id)}</td>
+      <td>${miniBar(f.accuracy)}</td>
+      <td style="text-align:center"><span class="tag-correct">✓ ${f.correct}</span></td>
+      <td style="text-align:center"><span class="tag-incorrect">${f.incorrect > 0 ? '✗ ' + f.incorrect : '—'}</span></td>
+      <td style="text-align:center;color:var(--muted)">${f.field_count}</td>
+    </tr>`).join('');
+
+  const perFileHTML = `
+  <div>
+    <div class="section-title">Per-File Accuracy</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Accuracy</th>
+          <th style="text-align:center">Correct</th>
+          <th style="text-align:center">Incorrect</th>
+          <th style="text-align:center">Fields</th>
+        </tr>
+      </thead>
+      <tbody>${perFileRows}</tbody>
+    </table>
+  </div>`;
+
+  //  Per-field table (worst → best):
+  const perFieldRows = data.per_field.map(f => `
+    <tr>
+      <td style="color:var(--text)">${escHtml(f.label)}</td>
+      <td style="color:var(--muted);font-size:10px">${escHtml(f.key)}</td>
+      <td>${miniBar(f.accuracy)}</td>
+      <td style="text-align:center"><span class="tag-correct">✓ ${f.correct_count}</span></td>
+      <td style="text-align:center"><span class="tag-incorrect">${(f.appearances - f.correct_count) > 0 ? '✗ ' + (f.appearances - f.correct_count) : '—'}</span></td>
+      <td style="text-align:center;color:var(--muted)">${f.appearances}</td>
+    </tr>`).join('');
+
+  const perFieldHTML = `
+  <div>
+    <div class="section-title">Per-Field Accuracy — sorted worst → best</div>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Key</th>
+          <th>Accuracy</th>
+          <th style="text-align:center">Correct</th>
+          <th style="text-align:center">Incorrect</th>
+          <th style="text-align:center">Files</th>
+        </tr>
+      </thead>
+      <tbody>${perFieldRows}</tbody>
+    </table>
+  </div>`;
+
+  document.getElementById('modal-body').innerHTML = cardHTML + perFileHTML + perFieldHTML;
+}
+
+function closeStats() {
+  document.getElementById('stats-modal').classList.remove('open');
+}
+function closeStatsOnOverlay(e) {
+  if (e.target === document.getElementById('stats-modal')) closeStats();
+}
+
+// Exports:
+function exportCSV() {
+  window.location.href = '/api/export';
+  toast('Downloading CSV…', 'ok');
+}
+
+function exportJSON() {
+  window.location.href = '/api/export-json';
+  toast('Downloading JSON…', 'ok');
+}
+
+//  Helpers:
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escAttr(s) { return escHtml(s); }
+
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+//  Auto-load on startup:
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/files').then(r => r.json()).then(data => {
+    if (!data.pairs || !data.pairs.length) return;
+    files = data.pairs.map(p => ({ id: p.id }));
+    data.pairs.forEach(p => { stemData[p.id] = { accuracy: p.accuracy }; });
+    document.getElementById('file-count').textContent  = files.length;
+    document.getElementById('btn-export').disabled     = false;
+    document.getElementById('btn-exportj').disabled    = false;
+    document.getElementById('btn-stats').disabled      = false;
+    document.getElementById('btn-next').disabled       = files.length <= 1;
+    renderSidebar();
+    loadFile(0);
+  }).catch(() => {});
+});
+</script>
+</body>
+</html>
